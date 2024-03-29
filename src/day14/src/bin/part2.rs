@@ -12,18 +12,18 @@ fn process(input: &str) -> i64 {
         .collect();
 
     let mut history = HashMap::new();
-    for i in 0..1_000_000_000 {
+    loop {
         let hash = hash_grid(&lines);
 
         if let Some(start) = history.get(&hash) {
-            let repeat_count = (1_000_000_000 - start) % (i - start);
+            let repeat_count = (1_000_000_000 - start) % (history.len() - start);
             for _ in 0..4 * repeat_count {
                 rotate_grid(&mut lines);
                 roll_stones(&mut lines);
             }
             break;
         } else {
-            history.insert(hash, i);
+            history.insert(hash, history.len());
             for _ in 0..4 {
                 rotate_grid(&mut lines);
                 roll_stones(&mut lines);
