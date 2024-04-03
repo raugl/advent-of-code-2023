@@ -100,43 +100,42 @@ enum Module<'a> {
 
 fn process(input: &str) -> i64 {
     let mut modules = parse_input(input);
+    let mut factors = BTreeMap::new();
 
-    let (low_count, high_count) = (0..1000)
-        .map(|_| {
-            let mut queue = VecDeque::from([Message {
-                pulse: Pulse::Low,
-                src: "button",
-                dest: "broadcaster",
-            }]);
+    let mut i = 0;
+    while factors.len() < 4 {
+        i += 1;
 
-            let mut low_count = 1;
-            let mut high_count = 0;
+        let mut queue = VecDeque::from([Message {
+            pulse: Pulse::Low,
+            src: "button",
+            dest: "broadcaster",
+        }]);
 
-            while let Some(msg) = queue.pop_front() {
-                let module = match modules.get_mut(msg.dest) {
-                    Some(module) => module,
-                    None => continue,
-                };
+        while let Some(msg) = queue.pop_front() {
+            let module = match modules.get_mut(msg.dest) {
+                Some(module) => module,
+                None => continue,
+            };
 
-                let messages = match module {
-                    Module::FlipFlop(module) => module.update(msg.dest, msg),
-                    Module::Conjunction(module) => module.update(msg.dest, msg),
-                    Module::Broadcaster(module) => module.update(msg.dest, msg),
-                };
+            let messages = match module {
+                Module::FlipFlop(module) => module.update(msg.dest, msg),
+                Module::Conjunction(module) => module.update(msg.dest, msg),
+                Module::Broadcaster(module) => module.update(msg.dest, msg),
+            };
 
-                for msg in messages.iter() {
-                    match msg.pulse {
-                        Pulse::Low => low_count += 1,
-                        Pulse::High => high_count += 1,
-                    }
+            for msg in messages.iter() {
+                if msg.pulse == Pulse::Low
+                    && ["kv", "jg", "rz", "mr"].contains(&msg.dest)
+                    && factors.get(msg.dest).is_none()
+                {
+                    factors.insert(msg.dest, i);
                 }
-                queue.extend(messages);
             }
-            (low_count, high_count)
-        })
-        .fold((0, 0), |acc, counts| (acc.0 + counts.0, acc.1 + counts.1));
-
-    low_count * high_count
+            queue.extend(messages);
+        }
+    }
+    factors.values().product()
 }
 
 fn parse_input<'a>(input: &'a str) -> BTreeMap<&str, Module<'a>> {
@@ -199,33 +198,4 @@ fn parse_input<'a>(input: &'a str) -> BTreeMap<&str, Module<'a>> {
 fn main() {
     let input = include_str!("input.txt");
     println!("Result: {}", process(input));
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test_process1() {
-        let input = "
-            broadcaster -> a, b, c
-            %a -> b
-            %b -> c
-            %c -> inv
-            &inv -> a
-        ";
-        assert_eq!(process(input), 32000000);
-    }
-
-    #[test]
-    fn test_process2() {
-        let input = "
-            broadcaster -> a
-            %a -> inv, con
-            &inv -> b
-            %b -> con
-            &con -> output
-        ";
-        assert_eq!(process(input), 11687500);
-    }
 }
